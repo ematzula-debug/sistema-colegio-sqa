@@ -1,5 +1,16 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
-import { Pencil, Plus, UserX } from "lucide-react";
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  FolderPlus,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  UserX,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +68,7 @@ export function SubjectsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [formData, setFormData] = useState<SubjectFormData>(initialFormData);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -74,11 +86,11 @@ export function SubjectsPage() {
           setSubjects(subjectsData);
           setGrades(gradesData);
         }
-      } catch (error) {
+      } catch (err) {
         if (active) {
           setError(
-            error instanceof Error
-              ? error.message
+            err instanceof Error
+              ? err.message
               : "Error al cargar asignaturas.",
           );
         }
@@ -176,9 +188,9 @@ export function SubjectsPage() {
       await reloadSubjects();
       setOpenDialog(false);
       resetForm();
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error ? error.message : "Error al guardar asignatura.",
+        err instanceof Error ? err.message : "Error al guardar asignatura.",
       );
     } finally {
       setSaving(false);
@@ -201,93 +213,157 @@ export function SubjectsPage() {
       await deactivateSubjectService(subject.id);
       setSuccessMessage("Asignatura desactivada correctamente.");
       await reloadSubjects();
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : "Error al desactivar asignatura.",
       );
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Asignaturas</h2>
-          <p className="text-muted-foreground">
-            Administración de cursos o materias por grado.
-          </p>
-        </div>
+  // Filtrado reactivo de asignaturas
+  const filteredSubjects = subjects.filter((subj) => {
+    const search = searchTerm.toLowerCase();
+    const codigo = subj.codigo?.toLowerCase() || "";
+    const nombre = subj.nombre?.toLowerCase() || "";
+    const grado = subj.gradoNombre?.toLowerCase() || "";
+    const nivel = subj.gradoNivel?.toLowerCase() || "";
+    return (
+      codigo.includes(search) ||
+      nombre.includes(search) ||
+      grado.includes(search) ||
+      nivel.includes(search)
+    );
+  });
 
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva asignatura
-        </Button>
+  return (
+    <div className="space-y-6 p-1">
+      {/* Banner Principal */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 text-white shadow-lg border border-slate-800">
+        <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-medium text-indigo-300 border border-indigo-500/30 backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-400" /> Plan Académico
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-white">
+              Gestión de Asignaturas
+            </h2>
+            <p className="text-sm text-slate-300 max-w-xl">
+              Administración de cursos o materias por cada grado institucional.
+            </p>
+          </div>
+
+          <Button
+            onClick={openCreateDialog}
+            className="w-full md:w-auto rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Asignatura
+          </Button>
+        </div>
       </div>
 
+      {/* Alertas */}
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+          <span>{error}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          {successMessage}
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span>{successMessage}</span>
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Listado de asignaturas</CardTitle>
-          <CardDescription>
-            Consulta, edición y desactivación de asignaturas registradas.
-          </CardDescription>
+      {/* Tarjeta de Tabla */}
+      <Card className="border shadow-sm rounded-2xl overflow-hidden bg-card">
+        <CardHeader className="bg-muted/20 pb-4 border-b">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                Listado de Asignaturas
+              </CardTitle>
+              <CardDescription>
+                Consulta, edición y desactivación de materias registradas en el sistema.
+              </CardDescription>
+            </div>
+
+            {/* Buscador Rápido */}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar asignatura o código..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 rounded-xl bg-background"
+              />
+            </div>
+          </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
-            <p className="text-sm text-muted-foreground">
-              Cargando asignaturas...
-            </p>
-          ) : subjects.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No hay asignaturas registradas.
-            </p>
+            <div className="flex flex-col items-center justify-center p-12 space-y-3 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <p className="text-sm font-medium">Cargando asignaturas...</p>
+            </div>
+          ) : filteredSubjects.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <BookOpen className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
+              <p className="text-base font-semibold text-foreground">No se encontraron asignaturas</p>
+              <p className="text-xs mt-1">
+                {searchTerm
+                  ? "Intenta buscar con otros términos."
+                  : "Presiona el botón 'Nueva Asignatura' para crear la primera."}
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/10">
                   <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Asignatura</TableHead>
-                    <TableHead>Grado</TableHead>
-                    <TableHead>Nivel</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="font-semibold">Código</TableHead>
+                    <TableHead className="font-semibold">Asignatura</TableHead>
+                    <TableHead className="font-semibold">Grado</TableHead>
+                    <TableHead className="font-semibold">Nivel</TableHead>
+                    <TableHead className="font-semibold">Estado</TableHead>
+                    <TableHead className="text-right font-semibold">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {subjects.map((subject) => (
-                    <TableRow key={subject.id}>
-                      <TableCell className="font-medium">
-                        {subject.codigo}
+                  {filteredSubjects.map((subject) => (
+                    <TableRow key={subject.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
+                        <span className="inline-block rounded-md bg-slate-100 dark:bg-slate-800 px-2.5 py-1 border border-slate-200 dark:border-slate-700">
+                          {subject.codigo}
+                        </span>
                       </TableCell>
 
-                      <TableCell>{subject.nombre}</TableCell>
+                      <TableCell className="font-bold text-foreground">
+                        {subject.nombre}
+                      </TableCell>
 
-                      <TableCell>{subject.gradoNombre || "-"}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {subject.gradoNombre || "-"}
+                      </TableCell>
 
-                      <TableCell>{subject.gradoNivel || "-"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {subject.gradoNivel || "-"}
+                      </TableCell>
 
                       <TableCell>
                         <Badge
-                          variant={
+                          variant="outline"
+                          className={
                             subject.estado === "ACTIVO"
-                              ? "default"
-                              : "secondary"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-900"
+                              : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
                           }
                         >
                           {subject.estado}
@@ -299,8 +375,9 @@ export function SubjectsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => openEditDialog(subject)}
+                          className="rounded-xl border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
+                          <Pencil className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                           Editar
                         </Button>
 
@@ -309,8 +386,9 @@ export function SubjectsPage() {
                           size="sm"
                           onClick={() => handleDeactivate(subject)}
                           disabled={subject.estado !== "ACTIVO"}
+                          className="rounded-xl disabled:opacity-40"
                         >
-                          <UserX className="mr-2 h-4 w-4" />
+                          <UserX className="mr-1.5 h-3.5 w-3.5" />
                           Desactivar
                         </Button>
                       </TableCell>
@@ -323,51 +401,63 @@ export function SubjectsPage() {
         </CardContent>
       </Card>
 
+      {/* Diálogo Modal de Registro/Edición */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingSubject ? "Editar asignatura" : "Registrar asignatura"}
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FolderPlus className="h-5 w-5 text-indigo-600" />
+              {editingSubject ? "Editar Asignatura" : "Registrar Asignatura"}
             </DialogTitle>
             <DialogDescription>
-              Define el código, nombre y grado al que pertenece la asignatura.
+              Define el código identificador, nombre y grado al que pertenece la materia.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="codigo">Código</Label>
+              <Label htmlFor="codigo" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Código de la Asignatura
+              </Label>
               <Input
                 id="codigo"
                 name="codigo"
                 value={formData.codigo}
                 onChange={handleChange}
-                placeholder="MAT-1B"
+                placeholder="Ej. MAT-1B"
+                className="rounded-xl uppercase font-mono"
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre de asignatura</Label>
+              <Label htmlFor="nombre" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Nombre de la Asignatura
+              </Label>
               <Input
                 id="nombre"
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleChange}
-                placeholder="Matemática"
+                placeholder="Ej. Matemática o Idioma Español"
+                className="rounded-xl"
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Grado</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Grado Académico
+              </Label>
               <Select
                 value={formData.gradoId}
                 onValueChange={handleGradeChange}
               >
-                <SelectTrigger className="w-full justify-between">
+                <SelectTrigger className="w-full justify-between rounded-xl">
                   <span
                     className={
                       formData.gradoId
-                        ? "truncate"
+                        ? "truncate font-medium"
                         : "truncate text-muted-foreground"
                     }
                   >
@@ -379,7 +469,7 @@ export function SubjectsPage() {
                   side="bottom"
                   align="start"
                   sideOffset={4}
-                  className="z-9999 min-w-260px"
+                  className="z-[9999] rounded-xl shadow-xl"
                 >
                   {grades
                     .filter(
@@ -397,17 +487,28 @@ export function SubjectsPage() {
               </Select>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-3 gap-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpenDialog(false)}
+                className="rounded-xl"
               >
                 Cancelar
               </Button>
 
-              <Button type="submit" disabled={saving}>
-                {saving ? "Guardando..." : "Guardar"}
+              <Button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold text-white shadow-md hover:from-blue-500 hover:to-indigo-500"
+              >
+                {saving ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
+                  </span>
+                ) : (
+                  "Guardar Asignatura"
+                )}
               </Button>
             </DialogFooter>
           </form>

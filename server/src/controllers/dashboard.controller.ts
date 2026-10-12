@@ -11,12 +11,12 @@ export async function getDashboardSummary(
       SELECT
         (SELECT COUNT(*) FROM alumnos WHERE estado = 'ACTIVO') AS alumnos,
         (SELECT COUNT(*) FROM profesores WHERE estado = 'ACTIVO') AS profesores,
-        (SELECT COUNT(*) FROM encargados WHERE estado = 'ACTIVO') AS encargados,
+        (SELECT COUNT(*) FROM encargados) AS encargados,
         (SELECT COUNT(*) FROM grados WHERE estado = 'ACTIVO') AS grados,
         (SELECT COUNT(*) FROM secciones WHERE estado = 'ACTIVO') AS secciones,
         (SELECT COUNT(*) FROM asignaturas WHERE estado = 'ACTIVO') AS asignaturas,
         (SELECT COUNT(*) FROM inscripciones WHERE estado = 'INSCRITO') AS inscripciones,
-        (SELECT COUNT(*) FROM notas WHERE estado = 'ACTIVO') AS notas
+        (SELECT COUNT(*) FROM notas) AS notas
     `);
 
     return res.json({

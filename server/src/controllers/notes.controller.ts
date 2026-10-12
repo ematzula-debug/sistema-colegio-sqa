@@ -120,8 +120,7 @@ export async function getNotes(req: AuthenticatedRequest, res: Response) {
         ce.anio AS "cicloEscolarAnio",
         n.unidad,
         n.nota,
-        n.fecha_registro AS "fechaRegistro",
-        n.estado
+        n.fecha_registro AS "fechaRegistro"
       FROM notas n
       INNER JOIN alumnos al ON al.id = n.alumno_id
       INNER JOIN asignaturas a ON a.id = n.asignatura_id
@@ -189,8 +188,8 @@ export async function createNote(req: AuthenticatedRequest, res: Response) {
     const result = await pool.query(
       `
       INSERT INTO notas
-      (alumno_id, asignatura_id, profesor_id, ciclo_escolar_id, unidad, nota, estado)
-      VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVO')
+      (alumno_id, asignatura_id, profesor_id, ciclo_escolar_id, unidad, nota)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING
         id,
         alumno_id AS "alumnoId",
@@ -199,8 +198,7 @@ export async function createNote(req: AuthenticatedRequest, res: Response) {
         ciclo_escolar_id AS "cicloEscolarId",
         unidad,
         nota,
-        fecha_registro AS "fechaRegistro",
-        estado
+        fecha_registro AS "fechaRegistro"
       `,
       [
         Number(alumnoId),
@@ -314,8 +312,7 @@ export async function updateNote(req: AuthenticatedRequest, res: Response) {
         ciclo_escolar_id AS "cicloEscolarId",
         unidad,
         nota,
-        fecha_registro AS "fechaRegistro",
-        estado
+        fecha_registro AS "fechaRegistro"
       `,
       [
         Number(alumnoId),
@@ -375,8 +372,7 @@ export async function annulNote(req: AuthenticatedRequest, res: Response) {
 
     const result = await pool.query(
       `
-      UPDATE notas
-      SET estado = 'ANULADA'
+      DELETE FROM notas
       WHERE id = $1
       RETURNING
         id,
@@ -386,8 +382,7 @@ export async function annulNote(req: AuthenticatedRequest, res: Response) {
         ciclo_escolar_id AS "cicloEscolarId",
         unidad,
         nota,
-        fecha_registro AS "fechaRegistro",
-        estado
+        fecha_registro AS "fechaRegistro"
       `,
       [id],
     );
@@ -401,7 +396,7 @@ export async function annulNote(req: AuthenticatedRequest, res: Response) {
 
     return res.json({
       success: true,
-      message: "Nota anulada correctamente.",
+      message: "Nota eliminada correctamente.",
       data: result.rows[0],
     });
   } catch (error) {

@@ -22,7 +22,6 @@ export async function getGuardians(_req: AuthenticatedRequest, res: Response) {
         telefono,
         direccion,
         correo,
-        estado,
         usuario_id AS "usuarioId"
       FROM encargados
       ORDER BY id DESC
@@ -57,8 +56,8 @@ export async function createGuardian(req: AuthenticatedRequest, res: Response) {
     const result = await pool.query(
       `
       INSERT INTO encargados
-      (dpi, nombres, apellidos, telefono, direccion, correo, estado)
-      VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVO')
+      (dpi, nombres, apellidos, telefono, direccion, correo)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING
         id,
         dpi,
@@ -67,7 +66,6 @@ export async function createGuardian(req: AuthenticatedRequest, res: Response) {
         telefono,
         direccion,
         correo,
-        estado,
         usuario_id AS "usuarioId"
       `,
       [
@@ -134,7 +132,6 @@ export async function updateGuardian(req: AuthenticatedRequest, res: Response) {
         telefono,
         direccion,
         correo,
-        estado,
         usuario_id AS "usuarioId"
       `,
       [
@@ -186,8 +183,7 @@ export async function deactivateGuardian(
 
     const result = await pool.query(
       `
-      UPDATE encargados
-      SET estado = 'INACTIVO'
+      DELETE FROM encargados
       WHERE id = $1
       RETURNING
         id,
@@ -197,7 +193,6 @@ export async function deactivateGuardian(
         telefono,
         direccion,
         correo,
-        estado,
         usuario_id AS "usuarioId"
       `,
       [id],
@@ -212,15 +207,15 @@ export async function deactivateGuardian(
 
     return res.json({
       success: true,
-      message: "Encargado desactivado correctamente.",
+      message: "Encargado eliminado correctamente.",
       data: result.rows[0],
     });
   } catch (error) {
-    console.error("Error al desactivar encargado:", error);
+    console.error("Error al eliminar encargado:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Error al desactivar encargado.",
+      message: "Error al eliminar encargado.",
     });
   }
 }

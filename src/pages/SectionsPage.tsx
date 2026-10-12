@@ -1,5 +1,16 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
-import { Pencil, Plus, UserX } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  FolderTree,
+  Layers,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  UserX,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +67,7 @@ export function SectionsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [formData, setFormData] = useState<SectionFormData>(initialFormData);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -73,12 +85,10 @@ export function SectionsPage() {
           setSections(sectionsData);
           setGrades(gradesData);
         }
-      } catch (error) {
+      } catch (err) {
         if (active) {
           setError(
-            error instanceof Error
-              ? error.message
-              : "Error al cargar secciones.",
+            err instanceof Error ? err.message : "Error al cargar secciones."
           );
         }
       } finally {
@@ -143,7 +153,7 @@ export function SectionsPage() {
 
   function getSelectedGradeLabel() {
     const selectedGrade = grades.find(
-      (grade) => String(grade.id) === formData.gradoId,
+      (grade) => String(grade.id) === formData.gradoId
     );
 
     if (!selectedGrade) {
@@ -172,9 +182,9 @@ export function SectionsPage() {
       await reloadSections();
       setOpenDialog(false);
       resetForm();
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error ? error.message : "Error al guardar sección.",
+        err instanceof Error ? err.message : "Error al guardar sección."
       );
     } finally {
       setSaving(false);
@@ -183,7 +193,7 @@ export function SectionsPage() {
 
   async function handleDeactivate(section: Section) {
     const confirmed = window.confirm(
-      `¿Deseas desactivar la sección ${section.nombre}?`,
+      `¿Deseas desactivar la sección ${section.nombre}?`
     );
 
     if (!confirmed) {
@@ -197,88 +207,148 @@ export function SectionsPage() {
       await deactivateSectionService(section.id);
       setSuccessMessage("Sección desactivada correctamente.");
       await reloadSections();
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error ? error.message : "Error al desactivar sección.",
+        err instanceof Error ? err.message : "Error al desactivar sección."
       );
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Secciones</h2>
-          <p className="text-muted-foreground">
-            Administración de secciones asociadas a cada grado.
-          </p>
-        </div>
+  // Filtrado reactivo de secciones
+  const filteredSections = sections.filter((sec) => {
+    const search = searchTerm.toLowerCase();
+    const nombre = sec.nombre?.toLowerCase() || "";
+    const grado = sec.gradoNombre?.toLowerCase() || "";
+    const nivel = sec.gradoNivel?.toLowerCase() || "";
+    return (
+      nombre.includes(search) ||
+      grado.includes(search) ||
+      nivel.includes(search)
+    );
+  });
 
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva sección
-        </Button>
+  return (
+    <div className="space-y-6 p-1">
+      {/* Banner Principal */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 text-white shadow-lg border border-slate-800">
+        <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-medium text-indigo-300 border border-indigo-500/30 backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-400" /> Estructura Académica
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-white">
+              Gestión de Secciones
+            </h2>
+            <p className="text-sm text-slate-300 max-w-xl">
+              Administración de secciones asociadas a cada grado del colegio.
+            </p>
+          </div>
+
+          <Button
+            onClick={openCreateDialog}
+            className="w-full md:w-auto rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Sección
+          </Button>
+        </div>
       </div>
 
+      {/* Alertas */}
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+          <span>{error}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          {successMessage}
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span>{successMessage}</span>
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Listado de secciones</CardTitle>
-          <CardDescription>
-            Consulta, edición y desactivación de secciones registradas.
-          </CardDescription>
+      {/* Tarjeta de Tabla */}
+      <Card className="border shadow-sm rounded-2xl overflow-hidden bg-card">
+        <CardHeader className="bg-muted/20 pb-4 border-b">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <FolderTree className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                Listado de Secciones
+              </CardTitle>
+              <CardDescription>
+                Consulta, edición y desactivación de secciones registradas en el sistema.
+              </CardDescription>
+            </div>
+
+            {/* Buscador Rápido */}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar sección o grado..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 rounded-xl bg-background"
+              />
+            </div>
+          </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
-            <p className="text-sm text-muted-foreground">
-              Cargando secciones...
-            </p>
-          ) : sections.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No hay secciones registradas.
-            </p>
+            <div className="flex flex-col items-center justify-center p-12 space-y-3 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <p className="text-sm font-medium">Cargando secciones...</p>
+            </div>
+          ) : filteredSections.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Layers className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
+              <p className="text-base font-semibold text-foreground">No se encontraron secciones</p>
+              <p className="text-xs mt-1">
+                {searchTerm
+                  ? "Intenta buscar con otros términos."
+                  : "Presiona el botón de 'Nueva Sección' para crear la primera."}
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/10">
                   <TableRow>
-                    <TableHead>Sección</TableHead>
-                    <TableHead>Grado</TableHead>
-                    <TableHead>Nivel</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="font-semibold">Sección</TableHead>
+                    <TableHead className="font-semibold">Grado</TableHead>
+                    <TableHead className="font-semibold">Nivel</TableHead>
+                    <TableHead className="font-semibold">Estado</TableHead>
+                    <TableHead className="text-right font-semibold">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {sections.map((section) => (
-                    <TableRow key={section.id}>
-                      <TableCell className="font-medium">
-                        {section.nombre}
+                  {filteredSections.map((section) => (
+                    <TableRow key={section.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-bold text-foreground">
+                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-extrabold text-sm mr-2">
+                          {section.nombre}
+                        </span>
                       </TableCell>
 
-                      <TableCell>{section.gradoNombre || "-"}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {section.gradoNombre || "-"}
+                      </TableCell>
 
-                      <TableCell>{section.gradoNivel || "-"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {section.gradoNivel || "-"}
+                      </TableCell>
 
                       <TableCell>
                         <Badge
-                          variant={
+                          variant="outline"
+                          className={
                             section.estado === "ACTIVO"
-                              ? "default"
-                              : "secondary"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-900"
+                              : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
                           }
                         >
                           {section.estado}
@@ -290,8 +360,9 @@ export function SectionsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => openEditDialog(section)}
+                          className="rounded-xl border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
+                          <Pencil className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                           Editar
                         </Button>
 
@@ -300,8 +371,9 @@ export function SectionsPage() {
                           size="sm"
                           onClick={() => handleDeactivate(section)}
                           disabled={section.estado !== "ACTIVO"}
+                          className="rounded-xl disabled:opacity-40"
                         >
-                          <UserX className="mr-2 h-4 w-4" />
+                          <UserX className="mr-1.5 h-3.5 w-3.5" />
                           Desactivar
                         </Button>
                       </TableCell>
@@ -314,40 +386,48 @@ export function SectionsPage() {
         </CardContent>
       </Card>
 
+      {/* Diálogo Modal de Registro/Edición */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingSection ? "Editar sección" : "Registrar sección"}
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FolderTree className="h-5 w-5 text-indigo-600" />
+              {editingSection ? "Editar Sección" : "Registrar Sección"}
             </DialogTitle>
             <DialogDescription>
-              Selecciona el grado y define el nombre de la sección.
+              Selecciona el grado y define el identificador o nombre de la sección.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre de sección</Label>
+              <Label htmlFor="nombre" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Nombre o Identificador de la Sección
+              </Label>
               <Input
                 id="nombre"
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleChange}
-                placeholder="A"
+                placeholder="Ej. A, B, C o Única"
+                className="rounded-xl"
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Grado</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Grado Académico
+              </Label>
               <Select
                 value={formData.gradoId}
                 onValueChange={handleGradeChange}
               >
-                <SelectTrigger className="w-full justify-between">
+                <SelectTrigger className="w-full justify-between rounded-xl">
                   <span
                     className={
                       formData.gradoId
-                        ? "truncate"
+                        ? "truncate font-medium"
                         : "truncate text-muted-foreground"
                     }
                   >
@@ -359,13 +439,13 @@ export function SectionsPage() {
                   side="bottom"
                   align="start"
                   sideOffset={4}
-                  className="z-9999 min-w-260px"
+                  className="z-[9999] rounded-xl shadow-xl"
                 >
                   {grades
                     .filter(
                       (grade) =>
                         grade.estado === "ACTIVO" ||
-                        String(grade.id) === formData.gradoId,
+                        String(grade.id) === formData.gradoId
                     )
                     .map((grade) => (
                       <SelectItem key={grade.id} value={String(grade.id)}>
@@ -377,17 +457,28 @@ export function SectionsPage() {
               </Select>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-3 gap-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpenDialog(false)}
+                className="rounded-xl"
               >
                 Cancelar
               </Button>
 
-              <Button type="submit" disabled={saving}>
-                {saving ? "Guardando..." : "Guardar"}
+              <Button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold text-white shadow-md hover:from-blue-500 hover:to-indigo-500"
+              >
+                {saving ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
+                  </span>
+                ) : (
+                  "Guardar Sección"
+                )}
               </Button>
             </DialogFooter>
           </form>

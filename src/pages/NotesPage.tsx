@@ -5,7 +5,18 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Pencil, Plus, XCircle } from "lucide-react";
+import {
+  Pencil,
+  Plus,
+  XCircle,
+  AlertCircle,
+  CheckCircle2,
+  FileCheck2,
+  Award,
+  BookOpen,
+  Sparkles,
+  Search,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +41,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Table,
@@ -63,6 +75,26 @@ const initialFormData: NoteFormData = {
 
 const units = ["Unidad 1", "Unidad 2", "Unidad 3", "Unidad 4", "Recuperación"];
 
+function FeedbackAlert({ error, success }: { error?: string; success?: string }) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700 shadow-sm backdrop-blur-sm dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+        <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+        <span>{error}</span>
+      </div>
+    );
+  }
+  if (success) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-700 shadow-sm backdrop-blur-sm dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-400">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+        <span>{success}</span>
+      </div>
+    );
+  }
+  return null;
+}
+
 export function NotesPage() {
   const [notes, setNotes] = useState<AcademicNote[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -72,38 +104,31 @@ export function NotesPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingNote, setEditingNote] = useState<AcademicNote | null>(null);
   const [formData, setFormData] = useState<NoteFormData>(initialFormData);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const user = getStoredUser();
   const userRole = user?.rol ?? "";
-
-  const canManageNotes =
-    userRole === "ADMIN" || userRole === "PROFESOR_DIRECTOR";
+  const canManageNotes = userRole === "ADMIN" || userRole === "PROFESOR_DIRECTOR";
 
   const activeEnrollments = useMemo(
-    () => enrollments.filter((enrollment) => enrollment.estado === "INSCRITO"),
+    () => enrollments.filter((e) => e.estado === "INSCRITO"),
     [enrollments],
   );
 
   const selectedEnrollment = useMemo(
-    () =>
-      activeEnrollments.find(
-        (enrollment) => String(enrollment.alumnoId) === formData.alumnoId,
-      ),
+    () => activeEnrollments.find((e) => String(e.alumnoId) === formData.alumnoId),
     [activeEnrollments, formData.alumnoId],
   );
 
   const filteredAssignments = useMemo(() => {
-    if (!selectedEnrollment) {
-      return [];
-    }
-
+    if (!selectedEnrollment) return [];
     return assignments.filter(
-      (assignment) =>
-        assignment.estado === "ACTIVO" &&
-        assignment.gradoId === selectedEnrollment.gradoId &&
-        assignment.seccionId === selectedEnrollment.seccionId,
+      (a) =>
+        a.estado === "ACTIVO" &&
+        a.gradoId === selectedEnrollment.gradoId &&
+        a.seccionId === selectedEnrollment.seccionId,
     );
   }, [assignments, selectedEnrollment]);
 
@@ -113,51 +138,57 @@ export function NotesPage() {
     async function loadInitialData() {
       try {
         if (canManageNotes) {
-          const [notesData, enrollmentsData, assignmentsData] =
-            await Promise.all([
-              getNotesService(),
-              getEnrollmentsService(),
-              getTeacherAssignmentsService(),
-            ]);
-
+          const [notesData, enrollmentsData, assignmentsData] = await Promise.all([
+            getNotesService(),
+            getEnrollmentsService(),
+            getTeacherAssignmentsService(),
+          ]);
           if (active) {
-            setNotes(notesData);
-            setEnrollments(enrollmentsData);
-            setAssignments(assignmentsData);
+            setNotes(Array.isArray(notesData) ? notesData : []);
+            setEnrollments(Array.isArray(enrollmentsData) ? enrollmentsData : []);
+            setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
           }
         } else {
           const notesData = await getNotesService();
-
-          if (active) {
-            setNotes(notesData);
-            setEnrollments([]);
-            setAssignments([]);
-          }
+          if (active) setNotes(Array.isArray(notesData) ? notesData : []);
         }
-      } catch (error) {
-        if (active) {
-          setError(
-            error instanceof Error ? error.message : "Error al cargar notas.",
-          );
-        }
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Error al cargar notas.");
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
 
     loadInitialData();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [canManageNotes]);
 
   async function reloadNotes() {
     const data = await getNotesService();
-    setNotes(data);
+    setNotes(Array.isArray(data) ? data : []);
   }
+
+  const filteredNotes = useMemo(() => {
+    if (!searchTerm.trim()) return notes;
+    const term = searchTerm.toLowerCase();
+    return notes.filter(
+      (n) =>
+        (n.alumnoNombre ?? "").toLowerCase().includes(term) ||
+        (n.alumnoCodigo ?? "").toLowerCase().includes(term) ||
+        (n.asignaturaNombre ?? "").toLowerCase().includes(term) ||
+        (n.unidad ?? "").toLowerCase().includes(term)
+    );
+  }, [notes, searchTerm]);
+
+  const stats = useMemo(() => {
+    const total = notes.length;
+    const activas = notes.filter((n) => n.estado === "ACTIVO");
+    const promedio = activas.length
+      ? (activas.reduce((acc, curr) => acc + Number(curr.nota), 0) / activas.length).toFixed(1)
+      : "0";
+    const aprobadas = activas.filter((n) => Number(n.nota) >= 60).length;
+    return { total, promedio, aprobadas };
+  }, [notes]);
 
   function resetForm() {
     setFormData(initialFormData);
@@ -177,9 +208,7 @@ export function NotesPage() {
     setSuccessMessage("");
 
     const assignment = assignments.find(
-      (item) =>
-        item.profesorId === note.profesorId &&
-        item.asignaturaId === note.asignaturaId,
+      (item) => item.profesorId === note.profesorId && item.asignaturaId === note.asignaturaId,
     );
 
     setFormData({
@@ -194,81 +223,27 @@ export function NotesPage() {
     setOpenDialog(true);
   }
 
-  function handleSelectChange(field: keyof NoteFormData, value: string | null) {
-    if (value === null) {
-      return;
-    }
-
+  function handleSelectChange(field: keyof NoteFormData, value: string) {
     setFormData((current) => {
       if (field === "alumnoId") {
-        return {
-          ...current,
-          alumnoId: value,
-          asignacionId: "",
-          asignaturaId: "",
-          profesorId: "",
-        };
+        return { ...current, alumnoId: value, asignacionId: "", asignaturaId: "", profesorId: "" };
       }
-
       if (field === "asignacionId") {
-        const selectedAssignment = assignments.find(
-          (assignment) => String(assignment.id) === value,
-        );
-
+        const selectedAssignment = assignments.find((a) => String(a.id) === value);
         return {
           ...current,
           asignacionId: value,
-          asignaturaId: selectedAssignment
-            ? String(selectedAssignment.asignaturaId)
-            : "",
-          profesorId: selectedAssignment
-            ? String(selectedAssignment.profesorId)
-            : "",
+          asignaturaId: selectedAssignment ? String(selectedAssignment.asignaturaId) : "",
+          profesorId: selectedAssignment ? String(selectedAssignment.profesorId) : "",
         };
       }
-
-      return {
-        ...current,
-        [field]: value,
-      };
+      return { ...current, [field]: value };
     });
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
-
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  }
-
-  function getStudentLabel() {
-    const enrollment = activeEnrollments.find(
-      (item) => String(item.alumnoId) === formData.alumnoId,
-    );
-
-    if (!enrollment) {
-      return "Selecciona un alumno";
-    }
-
-    return `${enrollment.alumnoCodigo} - ${enrollment.alumnoNombre}`;
-  }
-
-  function getAssignmentLabel() {
-    const assignment = assignments.find(
-      (item) => String(item.id) === formData.asignacionId,
-    );
-
-    if (!assignment) {
-      return "Selecciona asignatura y profesor";
-    }
-
-    return `${assignment.asignaturaCodigo} - ${assignment.asignaturaNombre} | ${assignment.profesorNombre}`;
-  }
-
-  function getUnitLabel() {
-    return formData.unidad || "Selecciona una unidad";
+    setFormData((current) => ({ ...current, [name]: value }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -290,161 +265,230 @@ export function NotesPage() {
       await reloadNotes();
       setOpenDialog(false);
       resetForm();
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Error al guardar nota.",
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar nota.");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleAnnul(note: AcademicNote) {
-    const confirmed = window.confirm(
-      `¿Deseas anular la nota de ${note.alumnoNombre}?`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    if (!window.confirm(`¿Deseas anular la nota de ${note.alumnoNombre}?`)) return;
 
     try {
       setError("");
       setSuccessMessage("");
-
       await annulNoteService(note.id);
       setSuccessMessage("Nota anulada correctamente.");
       await reloadNotes();
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Error al anular nota.",
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al anular nota.");
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Notas</h2>
-          <p className="text-muted-foreground">
-            Registro y consulta de calificaciones de los alumnos.
-          </p>
+    <div className="space-y-6 p-1">
+      {/* Banner Principal Estilo Dashboard */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 via-pink-600 to-purple-600 p-6 text-white shadow-lg">
+        <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5" /> Calificaciones Académicas
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight">Registro de Notas</h2>
+            <p className="text-sm text-pink-100 max-w-xl">
+              Control, ingreso y consulta detallada del rendimiento escolar por unidad evaluativa.
+            </p>
+          </div>
+          {canManageNotes && (
+            <Button
+              onClick={openCreateDialog}
+              className="bg-white text-pink-700 hover:bg-pink-50 font-semibold shadow-md transition-all hover:scale-105 active:scale-95"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Nueva Nota
+            </Button>
+          )}
         </div>
-
-        {canManageNotes && (
-          <Button onClick={openCreateDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva nota
-          </Button>
-        )}
       </div>
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <FeedbackAlert error={error} success={successMessage} />
 
-      {successMessage && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          {successMessage}
-        </div>
-      )}
+      {/* Tarjetas Resumen */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-0 shadow-sm relative overflow-hidden bg-card">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Evaluaciones</p>
+              <h3 className="text-3xl font-bold mt-1">{stats.total}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Notas ingresadas</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+              <FileCheck2 className="h-6 w-6" />
+            </div>
+          </CardContent>
+          <div className="h-1.5 w-full bg-rose-500" />
+        </Card>
 
-      <Card className="w-full max-w-full overflow-hidden">
-        <CardHeader>
-          <CardTitle>Listado de notas</CardTitle>
-          <CardDescription>
-            Consulta de notas registradas en el sistema.
-          </CardDescription>
+        <Card className="border-0 shadow-sm relative overflow-hidden bg-card">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Promedio General</p>
+              <h3 className="text-3xl font-bold mt-1 text-indigo-600">{stats.promedio} pts</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Rendimiento activo global</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+              <Award className="h-6 w-6" />
+            </div>
+          </CardContent>
+          <div className="h-1.5 w-full bg-indigo-500" />
+        </Card>
+
+        <Card className="border-0 shadow-sm relative overflow-hidden bg-card">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notas Aprobadas</p>
+              <h3 className="text-3xl font-bold mt-1 text-emerald-600">{stats.aprobadas}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Punteos igual o mayor a 60</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+              <BookOpen className="h-6 w-6" />
+            </div>
+          </CardContent>
+          <div className="h-1.5 w-full bg-emerald-500" />
+        </Card>
+      </div>
+
+      {/* Tabla Principal */}
+      <Card className="border shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="flex flex-col gap-4 space-y-0 md:flex-row md:items-center md:justify-between bg-card pb-4">
+          <div>
+            <CardTitle className="text-lg font-bold">Listado de Notas</CardTitle>
+            <CardDescription>
+              Mostrando {filteredNotes.length} calificación(es) registrada(s)
+            </CardDescription>
+          </div>
+
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar por alumno, materia o unidad..."
+              className="pl-9 rounded-xl border-muted bg-muted/30 focus-visible:bg-background"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Cargando notas...</p>
-          ) : notes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No hay notas registradas.
-            </p>
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              Cargando libreta de notas...
+            </div>
+          ) : filteredNotes.length === 0 ? (
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              No hay calificaciones registradas que coincidan.
+            </div>
           ) : (
-            <div className="w-full overflow-x-auto">
-              <Table className="min-w-900px">
+            <div className="overflow-x-auto">
+              <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Alumno</TableHead>
-                    <TableHead>Asignatura</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Profesor
-                    </TableHead>
-                    <TableHead>Unidad</TableHead>
-                    <TableHead>Nota</TableHead>
-                    <TableHead>Ciclo</TableHead>
-                    <TableHead>Estado</TableHead>
-                    {canManageNotes && (
-                      <TableHead className="text-right">Acciones</TableHead>
-                    )}
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="font-semibold">Alumno</TableHead>
+                    <TableHead className="font-semibold">Asignatura</TableHead>
+                    <TableHead className="hidden md:table-cell font-semibold">Profesor</TableHead>
+                    <TableHead className="font-semibold">Unidad</TableHead>
+                    <TableHead className="font-semibold">Punteo</TableHead>
+                    <TableHead className="hidden sm:table-cell font-semibold">Ciclo</TableHead>
+                    <TableHead className="font-semibold">Estado</TableHead>
+                    {canManageNotes && <TableHead className="text-right font-semibold">Acciones</TableHead>}
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {notes.map((note) => (
-                    <TableRow key={note.id}>
-                      <TableCell>
-                        {note.alumnoCodigo} - {note.alumnoNombre}
-                      </TableCell>
+                  {filteredNotes.map((note) => {
+                    const notaNum = Number(note.nota);
+                    const esAprobada = notaNum >= 60;
 
-                      <TableCell>
-                        {note.asignaturaCodigo} - {note.asignaturaNombre}
-                      </TableCell>
-
-                      <TableCell className="hidden md:table-cell">
-                        {note.profesorNombre}
-                      </TableCell>
-
-                      <TableCell>{note.unidad}</TableCell>
-
-                      <TableCell className="font-semibold">
-                        {Number(note.nota).toFixed(2)}
-                      </TableCell>
-
-                      <TableCell>{note.cicloEscolarAnio}</TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant={
-                            note.estado === "ACTIVO" ? "default" : "secondary"
-                          }
-                        >
-                          {note.estado}
-                        </Badge>
-                      </TableCell>
-
-                      {canManageNotes && (
-                        <TableCell className="space-x-2 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(note)}
-                            disabled={note.estado !== "ACTIVO"}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Button>
-
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleAnnul(note)}
-                            disabled={note.estado !== "ACTIVO"}
-                          >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Anular
-                          </Button>
+                    return (
+                      <TableRow key={note.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="font-medium text-foreground">
+                          <div>{note.alumnoNombre}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{note.alumnoCodigo}</div>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
+
+                        <TableCell>
+                          <div className="font-medium">{note.asignaturaNombre}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{note.asignaturaCodigo}</div>
+                        </TableCell>
+
+                        <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                          {note.profesorNombre}
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            {note.unidad}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-md ${
+                              esAprobada
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                : "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
+                            }`}
+                          >
+                            {notaNum.toFixed(2)} pts
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="hidden sm:table-cell text-xs font-medium text-muted-foreground">
+                          {note.cicloEscolarAnio}
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge
+                            variant={note.estado === "ACTIVO" ? "default" : "secondary"}
+                            className={
+                              note.estado === "ACTIVO"
+                                ? "bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 dark:bg-blue-950 dark:text-blue-300"
+                                : ""
+                            }
+                          >
+                            {note.estado}
+                          </Badge>
+                        </TableCell>
+
+                        {canManageNotes && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950"
+                                onClick={() => openEditDialog(note)}
+                                disabled={note.estado !== "ACTIVO"}
+                              >
+                                <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
+                                onClick={() => handleAnnul(note)}
+                                disabled={note.estado !== "ACTIVO"}
+                              >
+                                <XCircle className="mr-1 h-3.5 w-3.5" /> Anular
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -452,51 +496,32 @@ export function NotesPage() {
         </CardContent>
       </Card>
 
+      {/* Modal / Diálogo Formulario */}
       {canManageNotes && (
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg rounded-2xl">
             <DialogHeader>
-              <DialogTitle>
-                {editingNote ? "Editar nota" : "Registrar nota"}
+              <DialogTitle className="text-xl font-bold">
+                {editingNote ? "Editar Nota" : "Registrar Nota"}
               </DialogTitle>
               <DialogDescription>
-                Selecciona un alumno inscrito, una asignación docente y registra
-                la nota correspondiente.
+                Selecciona al estudiante, la asignatura y la unidad evaluada.
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Alumno</Label>
+                <Label>Alumno *</Label>
                 <Select
                   value={formData.alumnoId}
-                  onValueChange={(value) =>
-                    handleSelectChange("alumnoId", value)
-                  }
+                  onValueChange={(value) => handleSelectChange("alumnoId", value)}
                 >
-                  <SelectTrigger className="w-full justify-between">
-                    <span
-                      className={
-                        formData.alumnoId
-                          ? "truncate"
-                          : "truncate text-muted-foreground"
-                      }
-                    >
-                      {getStudentLabel()}
-                    </span>
+                  <SelectTrigger className="w-full rounded-xl">
+                    <SelectValue placeholder="Selecciona un alumno" />
                   </SelectTrigger>
-
-                  <SelectContent
-                    side="bottom"
-                    align="start"
-                    sideOffset={4}
-                    className="z-9999 min-w-300px"
-                  >
+                  <SelectContent>
                     {activeEnrollments.map((enrollment) => (
-                      <SelectItem
-                        key={enrollment.id}
-                        value={String(enrollment.alumnoId)}
-                      >
+                      <SelectItem key={enrollment.id} value={String(enrollment.alumnoId)}>
                         {enrollment.alumnoCodigo} - {enrollment.alumnoNombre}
                       </SelectItem>
                     ))}
@@ -505,40 +530,25 @@ export function NotesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Asignatura / Profesor</Label>
+                <Label>Asignatura / Profesor *</Label>
                 <Select
                   value={formData.asignacionId}
-                  onValueChange={(value) =>
-                    handleSelectChange("asignacionId", value)
-                  }
+                  onValueChange={(value) => handleSelectChange("asignacionId", value)}
                   disabled={!formData.alumnoId}
                 >
-                  <SelectTrigger className="w-full justify-between">
-                    <span
-                      className={
-                        formData.asignacionId
-                          ? "truncate"
-                          : "truncate text-muted-foreground"
+                  <SelectTrigger className="w-full rounded-xl">
+                    <SelectValue
+                      placeholder={
+                        formData.alumnoId
+                          ? "Selecciona asignatura y profesor"
+                          : "Primero selecciona un alumno"
                       }
-                    >
-                      {getAssignmentLabel()}
-                    </span>
+                    />
                   </SelectTrigger>
-
-                  <SelectContent
-                    side="bottom"
-                    align="start"
-                    sideOffset={4}
-                    className="z-9999 min-w-320px"
-                  >
+                  <SelectContent>
                     {filteredAssignments.map((assignment) => (
-                      <SelectItem
-                        key={assignment.id}
-                        value={String(assignment.id)}
-                      >
-                        {assignment.asignaturaCodigo} -{" "}
-                        {assignment.asignaturaNombre} |{" "}
-                        {assignment.profesorNombre}
+                      <SelectItem key={assignment.id} value={String(assignment.id)}>
+                        {assignment.asignaturaCodigo} - {assignment.asignaturaNombre} | {assignment.profesorNombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -546,29 +556,15 @@ export function NotesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Unidad</Label>
+                <Label>Unidad *</Label>
                 <Select
                   value={formData.unidad}
                   onValueChange={(value) => handleSelectChange("unidad", value)}
                 >
-                  <SelectTrigger className="w-full justify-between">
-                    <span
-                      className={
-                        formData.unidad
-                          ? "truncate"
-                          : "truncate text-muted-foreground"
-                      }
-                    >
-                      {getUnitLabel()}
-                    </span>
+                  <SelectTrigger className="w-full rounded-xl">
+                    <SelectValue placeholder="Selecciona una unidad" />
                   </SelectTrigger>
-
-                  <SelectContent
-                    side="bottom"
-                    align="start"
-                    sideOffset={4}
-                    className="z-9999 min-w-260px"
-                  >
+                  <SelectContent>
                     {units.map((unit) => (
                       <SelectItem key={unit} value={unit}>
                         {unit}
@@ -579,7 +575,7 @@ export function NotesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nota">Nota</Label>
+                <Label htmlFor="nota">Calificación / Nota *</Label>
                 <Input
                   id="nota"
                   name="nota"
@@ -589,21 +585,24 @@ export function NotesPage() {
                   step="0.01"
                   value={formData.nota}
                   onChange={handleInputChange}
-                  placeholder="85"
+                  placeholder="Ej: 85"
+                  className="rounded-xl font-mono text-base"
+                  required
                 />
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="pt-4">
                 <Button
                   type="button"
                   variant="outline"
+                  className="rounded-xl"
                   onClick={() => setOpenDialog(false)}
                 >
                   Cancelar
                 </Button>
 
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Guardando..." : "Guardar"}
+                <Button type="submit" disabled={saving} className="rounded-xl bg-pink-600 hover:bg-pink-700">
+                  {saving ? "Guardando..." : "Guardar Nota"}
                 </Button>
               </DialogFooter>
             </form>

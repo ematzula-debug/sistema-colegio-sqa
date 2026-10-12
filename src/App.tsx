@@ -16,6 +16,7 @@ import { TeacherAssignmentsPage } from "@/pages/TeacherAssignmentsPage";
 import { EnrollmentsPage } from "./pages/EnrollmentsPage";
 import { NotesPage } from "./pages/NotesPage";
 import { RoleRoute } from "./routes/RoleRoute";
+import { getDefaultPathByRole } from "@/lib/roles";
 
 function App() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser());
@@ -36,7 +37,7 @@ function App() {
           path="/login"
           element={
             user ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to={getDefaultPathByRole(user.rol)} replace />
             ) : (
               <LoginPage onLoginSuccess={handleLoginSuccess} />
             )
@@ -150,7 +151,12 @@ function App() {
 
         <Route
           path="*"
-          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
+          element={
+            <Navigate
+              to={user ? getDefaultPathByRole(user.rol) : "/login"}
+              replace
+            />
+          }
         />
       </Routes>
     </BrowserRouter>
@@ -158,3 +164,5 @@ function App() {
 }
 
 export default App;
+
+

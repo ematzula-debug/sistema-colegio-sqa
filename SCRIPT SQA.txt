@@ -1,0 +1,327 @@
+CREATE TABLE IF NOT EXISTS public.alumno_encargado
+(
+    id serial NOT NULL,
+    alumno_id integer NOT NULL,
+    encargado_id integer NOT NULL,
+    parentesco character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT alumno_encargado_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_alumno_encargado UNIQUE (alumno_id, encargado_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.alumnos
+(
+    id serial NOT NULL,
+    codigo character varying(30) COLLATE pg_catalog."default" NOT NULL,
+    nombres character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    apellidos character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    fecha_nacimiento date,
+    direccion text COLLATE pg_catalog."default",
+    telefono character varying(20) COLLATE pg_catalog."default",
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    usuario_id integer,
+    CONSTRAINT alumnos_pkey PRIMARY KEY (id),
+    CONSTRAINT alumnos_codigo_key UNIQUE (codigo),
+    CONSTRAINT alumnos_usuario_id_key UNIQUE (usuario_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.asignaciones_profesor
+(
+    id serial NOT NULL,
+    profesor_id integer NOT NULL,
+    asignatura_id integer NOT NULL,
+    grado_id integer NOT NULL,
+    seccion_id integer NOT NULL,
+    ciclo_escolar_id integer NOT NULL,
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    CONSTRAINT asignaciones_profesor_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_asignacion_profesor UNIQUE (profesor_id, asignatura_id, grado_id, seccion_id, ciclo_escolar_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.asignaturas
+(
+    id serial NOT NULL,
+    codigo character varying(30) COLLATE pg_catalog."default" NOT NULL,
+    nombre character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    grado_id integer NOT NULL,
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    CONSTRAINT asignaturas_pkey PRIMARY KEY (id),
+    CONSTRAINT asignaturas_codigo_key UNIQUE (codigo)
+);
+
+CREATE TABLE IF NOT EXISTS public.bitacora_sistema
+(
+    id serial NOT NULL,
+    usuario_id integer,
+    accion character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    descripcion text COLLATE pg_catalog."default",
+    fecha_hora timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT bitacora_sistema_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.ciclos_escolares
+(
+    id serial NOT NULL,
+    anio integer NOT NULL,
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    CONSTRAINT ciclos_escolares_pkey PRIMARY KEY (id),
+    CONSTRAINT ciclos_escolares_anio_key UNIQUE (anio)
+);
+
+CREATE TABLE IF NOT EXISTS public.encargados
+(
+    id serial NOT NULL,
+    dpi character varying(20) COLLATE pg_catalog."default",
+    nombres character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    apellidos character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    telefono character varying(20) COLLATE pg_catalog."default",
+    direccion text COLLATE pg_catalog."default",
+    correo character varying(100) COLLATE pg_catalog."default",
+    usuario_id integer,
+    CONSTRAINT encargados_pkey PRIMARY KEY (id),
+    CONSTRAINT encargados_usuario_id_key UNIQUE (usuario_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.grados
+(
+    id serial NOT NULL,
+    nombre character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    nivel character varying(50) COLLATE pg_catalog."default",
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    CONSTRAINT grados_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.inscripciones
+(
+    id serial NOT NULL,
+    alumno_id integer NOT NULL,
+    ciclo_escolar_id integer NOT NULL,
+    grado_id integer NOT NULL,
+    seccion_id integer NOT NULL,
+    fecha_inscripcion date NOT NULL DEFAULT CURRENT_DATE,
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'INSCRITO'::character varying,
+    CONSTRAINT inscripciones_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_inscripcion_alumno_ciclo UNIQUE (alumno_id, ciclo_escolar_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.notas
+(
+    id serial NOT NULL,
+    alumno_id integer NOT NULL,
+    asignatura_id integer NOT NULL,
+    profesor_id integer NOT NULL,
+    ciclo_escolar_id integer NOT NULL,
+    unidad character varying(30) COLLATE pg_catalog."default" NOT NULL,
+    nota numeric(5, 2) NOT NULL,
+    fecha_registro date NOT NULL DEFAULT CURRENT_DATE,
+    CONSTRAINT notas_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_nota_alumno_asignatura_unidad UNIQUE (alumno_id, asignatura_id, ciclo_escolar_id, unidad)
+);
+
+CREATE TABLE IF NOT EXISTS public.profesores
+(
+    id serial NOT NULL,
+    codigo character varying(30) COLLATE pg_catalog."default" NOT NULL,
+    nombres character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    apellidos character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    telefono character varying(20) COLLATE pg_catalog."default",
+    correo character varying(100) COLLATE pg_catalog."default",
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    usuario_id integer,
+    CONSTRAINT profesores_pkey PRIMARY KEY (id),
+    CONSTRAINT profesores_codigo_key UNIQUE (codigo),
+    CONSTRAINT profesores_usuario_id_key UNIQUE (usuario_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.roles
+(
+    id serial NOT NULL,
+    nombre character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    descripcion text COLLATE pg_catalog."default",
+    CONSTRAINT roles_pkey PRIMARY KEY (id),
+    CONSTRAINT roles_nombre_key UNIQUE (nombre)
+);
+
+CREATE TABLE IF NOT EXISTS public.secciones
+(
+    id serial NOT NULL,
+    nombre character varying(10) COLLATE pg_catalog."default" NOT NULL,
+    grado_id integer NOT NULL,
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    CONSTRAINT secciones_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_seccion_grado UNIQUE (nombre, grado_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.usuarios
+(
+    id serial NOT NULL,
+    nombre_usuario character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    correo character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    contrasena character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    estado character varying(20) COLLATE pg_catalog."default" NOT NULL DEFAULT 'ACTIVO'::character varying,
+    rol_id integer NOT NULL,
+    fecha_creacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT usuarios_pkey PRIMARY KEY (id),
+    CONSTRAINT usuarios_correo_key UNIQUE (correo),
+    CONSTRAINT usuarios_nombre_usuario_key UNIQUE (nombre_usuario)
+);
+
+ALTER TABLE IF EXISTS public.alumno_encargado
+    ADD CONSTRAINT fk_alumno_encargado_alumno FOREIGN KEY (alumno_id)
+    REFERENCES public.alumnos (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.alumno_encargado
+    ADD CONSTRAINT fk_alumno_encargado_encargado FOREIGN KEY (encargado_id)
+    REFERENCES public.encargados (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.alumnos
+    ADD CONSTRAINT fk_alumnos_usuarios FOREIGN KEY (usuario_id)
+    REFERENCES public.usuarios (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+CREATE INDEX IF NOT EXISTS alumnos_usuario_id_key
+    ON public.alumnos(usuario_id);
+
+
+ALTER TABLE IF EXISTS public.asignaciones_profesor
+    ADD CONSTRAINT fk_asignaciones_asignaturas FOREIGN KEY (asignatura_id)
+    REFERENCES public.asignaturas (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.asignaciones_profesor
+    ADD CONSTRAINT fk_asignaciones_ciclos FOREIGN KEY (ciclo_escolar_id)
+    REFERENCES public.ciclos_escolares (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.asignaciones_profesor
+    ADD CONSTRAINT fk_asignaciones_grados FOREIGN KEY (grado_id)
+    REFERENCES public.grados (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.asignaciones_profesor
+    ADD CONSTRAINT fk_asignaciones_profesores FOREIGN KEY (profesor_id)
+    REFERENCES public.profesores (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.asignaciones_profesor
+    ADD CONSTRAINT fk_asignaciones_secciones FOREIGN KEY (seccion_id)
+    REFERENCES public.secciones (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.asignaturas
+    ADD CONSTRAINT fk_asignaturas_grados FOREIGN KEY (grado_id)
+    REFERENCES public.grados (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.bitacora_sistema
+    ADD CONSTRAINT fk_bitacora_usuarios FOREIGN KEY (usuario_id)
+    REFERENCES public.usuarios (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.encargados
+    ADD CONSTRAINT fk_encargados_usuarios FOREIGN KEY (usuario_id)
+    REFERENCES public.usuarios (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+CREATE INDEX IF NOT EXISTS encargados_usuario_id_key
+    ON public.encargados(usuario_id);
+
+
+ALTER TABLE IF EXISTS public.inscripciones
+    ADD CONSTRAINT fk_inscripciones_alumnos FOREIGN KEY (alumno_id)
+    REFERENCES public.alumnos (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.inscripciones
+    ADD CONSTRAINT fk_inscripciones_ciclos FOREIGN KEY (ciclo_escolar_id)
+    REFERENCES public.ciclos_escolares (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.inscripciones
+    ADD CONSTRAINT fk_inscripciones_grados FOREIGN KEY (grado_id)
+    REFERENCES public.grados (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.inscripciones
+    ADD CONSTRAINT fk_inscripciones_secciones FOREIGN KEY (seccion_id)
+    REFERENCES public.secciones (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.notas
+    ADD CONSTRAINT fk_notas_alumnos FOREIGN KEY (alumno_id)
+    REFERENCES public.alumnos (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.notas
+    ADD CONSTRAINT fk_notas_asignaturas FOREIGN KEY (asignatura_id)
+    REFERENCES public.asignaturas (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.notas
+    ADD CONSTRAINT fk_notas_ciclos FOREIGN KEY (ciclo_escolar_id)
+    REFERENCES public.ciclos_escolares (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.notas
+    ADD CONSTRAINT fk_notas_profesores FOREIGN KEY (profesor_id)
+    REFERENCES public.profesores (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.profesores
+    ADD CONSTRAINT fk_profesores_usuarios FOREIGN KEY (usuario_id)
+    REFERENCES public.usuarios (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+CREATE INDEX IF NOT EXISTS profesores_usuario_id_key
+    ON public.profesores(usuario_id);
+
+
+ALTER TABLE IF EXISTS public.secciones
+    ADD CONSTRAINT fk_secciones_grados FOREIGN KEY (grado_id)
+    REFERENCES public.grados (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+
+ALTER TABLE IF EXISTS public.usuarios
+    ADD CONSTRAINT fk_usuarios_roles FOREIGN KEY (rol_id)
+    REFERENCES public.roles (id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
+
+END;
