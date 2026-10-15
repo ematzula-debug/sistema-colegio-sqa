@@ -540,7 +540,7 @@ export function TeacherAssignmentsPage() {
               <Select
                 value={formData.profesorId}
                 onValueChange={(value) =>
-                  handleSelectChange("profesorId", value)
+                  handleSelectChange("profesorId", value ?? "")
                 }
               >
                 <SelectTrigger className="w-full justify-between rounded-xl">
@@ -577,7 +577,7 @@ export function TeacherAssignmentsPage() {
               </Label>
               <Select
                 value={formData.gradoId}
-                onValueChange={(value) => handleSelectChange("gradoId", value)}
+                onValueChange={(value) => handleSelectChange("gradoId", value ?? "")}
               >
                 <SelectTrigger className="w-full justify-between rounded-xl">
                   <span
@@ -615,7 +615,7 @@ export function TeacherAssignmentsPage() {
               <Select
                 value={formData.asignaturaId}
                 onValueChange={(value) =>
-                  handleSelectChange("asignaturaId", value)
+                  handleSelectChange("asignaturaId", value ?? "")
                 }
                 disabled={!formData.gradoId}
               >
@@ -654,7 +654,7 @@ export function TeacherAssignmentsPage() {
               <Select
                 value={formData.seccionId}
                 onValueChange={(value) =>
-                  handleSelectChange("seccionId", value)
+                  handleSelectChange("seccionId", value ?? "")
                 }
                 disabled={!formData.gradoId}
               >

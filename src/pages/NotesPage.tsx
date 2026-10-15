@@ -514,7 +514,7 @@ export function NotesPage() {
                 <Label>Alumno *</Label>
                 <Select
                   value={formData.alumnoId}
-                  onValueChange={(value) => handleSelectChange("alumnoId", value)}
+                  onValueChange={(value) => handleSelectChange("alumnoId", value ?? "")}
                 >
                   <SelectTrigger className="w-full rounded-xl">
                     <SelectValue placeholder="Selecciona un alumno" />
@@ -533,7 +533,7 @@ export function NotesPage() {
                 <Label>Asignatura / Profesor *</Label>
                 <Select
                   value={formData.asignacionId}
-                  onValueChange={(value) => handleSelectChange("asignacionId", value)}
+                  onValueChange={(value) => handleSelectChange("asignacionId", value ?? "")}
                   disabled={!formData.alumnoId}
                 >
                   <SelectTrigger className="w-full rounded-xl">
@@ -559,7 +559,7 @@ export function NotesPage() {
                 <Label>Unidad *</Label>
                 <Select
                   value={formData.unidad}
-                  onValueChange={(value) => handleSelectChange("unidad", value)}
+                  onValueChange={(value) => handleSelectChange("unidad", value ?? "")}
                 >
                   <SelectTrigger className="w-full rounded-xl">
                     <SelectValue placeholder="Selecciona una unidad" />

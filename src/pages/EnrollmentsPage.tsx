@@ -510,7 +510,7 @@ export function EnrollmentsPage() {
               <Label>Alumno *</Label>
               <Select
                 value={formData.alumnoId}
-                onValueChange={(value) => handleSelectChange("alumnoId", value)}
+                onValueChange={(value) => handleSelectChange("alumnoId", value ?? "")}
               >
                 <SelectTrigger className="w-full rounded-xl">
                   <SelectValue placeholder="Selecciona un alumno" />
@@ -530,7 +530,7 @@ export function EnrollmentsPage() {
               <Label>Grado *</Label>
               <Select
                 value={formData.gradoId}
-                onValueChange={(value) => handleSelectChange("gradoId", value)}
+                onValueChange={(value) => handleSelectChange("gradoId", value ?? "")}
               >
                 <SelectTrigger className="w-full rounded-xl">
                   <SelectValue placeholder="Selecciona un grado" />
@@ -551,7 +551,7 @@ export function EnrollmentsPage() {
               <Label>Sección *</Label>
               <Select
                 value={formData.seccionId}
-                onValueChange={(value) => handleSelectChange("seccionId", value)}
+                onValueChange={(value) => handleSelectChange("seccionId", value ?? "")}
                 disabled={!formData.gradoId}
               >
                 <SelectTrigger className="w-full rounded-xl">
